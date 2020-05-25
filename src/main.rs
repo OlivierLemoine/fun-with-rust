@@ -1,8 +1,12 @@
 use std::marker::PhantomData;
 
+#[derive(Debug)]
 struct True;
+#[derive(Debug)]
 struct False;
+#[derive(Debug)]
 struct Zero;
+#[derive(Debug)]
 struct Suc<N: Nat> {
     _pred: PhantomData<N>,
 }
@@ -16,24 +20,7 @@ impl IsEqualTo<Zero, True> for Zero {}
 impl<N: Nat> IsEqualTo<Suc<N>, False> for Zero {}
 impl<N: Nat> IsEqualTo<Zero, False> for Suc<N> {}
 
-trait Merge<Other> {
-    type Res;
-    fn merge(self, other: Other) -> Self::Res;
-}
-impl<T, M: Nat> Merge<SizeProofVec<T, Zero>> for SizeProofVec<T, M> {
-    type Res = SizeProofVec<T, M>;
-    fn merge(self, _: SizeProofVec<T, Zero>) -> Self::Res {
-        self
-    }
-}
-impl<T, N: Nat, M: Nat> Merge<SizeProofVec<T, Suc<N>>> for SizeProofVec<T, M> {
-    type Res = SizeProofVec<T, Suc<M>>;
-    fn merge(self, other: SizeProofVec<T, Suc<N>>) -> Self::Res {
-        let (new_other, x) = other.pop();
-        self.push(x)
-    }
-}
-
+#[derive(Debug)]
 struct SizeProofVec<T, N: Nat> {
     v: Vec<T>,
     _size: PhantomData<N>,
@@ -50,6 +37,22 @@ impl<T, N: Nat> SizeProofVec<T, N> {
         SizeProofVec {
             v: self.v,
             _size: PhantomData,
+        }
+    }
+    pub fn suck_up_one<M: Nat>(
+        mut self,
+        other: SizeProofVec<T, Suc<M>>,
+    ) -> (SizeProofVec<T, Suc<N>>, SizeProofVec<T, M>) {
+        let (v, x) = other.pop();
+        let res = self.push(x);
+        (res, v)
+    }
+    pub fn merge<M: Nat>(mut self, other: SizeProofVec<T, Suc<M>>) -> SizeProofVec<T, impl Nat> {
+        if other.is_empty_bool() {
+            self
+        } else {
+            let (s, o) = self.suck_up_one(other);
+            s
         }
     }
 }
@@ -91,18 +94,26 @@ where
 fn main() {
     let a: SizeProofVec<u32, Zero> = SizeProofVec::new();
     let b: SizeProofVec<u32, Zero> = SizeProofVec::new();
-    let is_a_empty = a.is_empty();
+    let _is_a_empty = a.is_empty();
 
     let a = a.push(1);
     let b = b.push(1);
-    let is_a_empty = a.is_empty();
+    let _is_a_empty = a.is_empty();
 
     let a = a.pop().0;
-    let is_a_empty = a.is_empty();
+    let _is_a_empty = a.is_empty();
 
     let a = a.push(1);
 
+    let (a, b) = a.suck_up_one(b);
+
+    let b = b.push(1);
+    let b = b.push(1);
+    let b = b.push(1);
+
     let a = a.merge(b);
+
+    //println!("{:?} {:?}", a, b);
 
     // test_eq(&a, &b);
 
